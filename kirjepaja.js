@@ -10,6 +10,13 @@
 //    pysyvään talletukseen käyttäjän valinnalla.
 "use strict";
 
+// Kehysmurto: estä sivun upottaminen toiselle sivulle (meta-CSP ei kata frame-ancestorsia)
+if (window.top !== window.self) {
+  try { window.top.location = window.self.location; } catch (_) { /* eri origin */ }
+  document.documentElement.textContent = "";
+  throw new Error("kehystetty");
+}
+
 const API = "https://uzaaynqxbfpjxgvetgam.supabase.co/functions/v1/kirjepalvelu";
 const $ = (id) => document.getElementById(id);
 
@@ -230,8 +237,13 @@ async function openDraft(id) {
     msg("editMsg", ""); msg("actionMsg", ""); msg("jobBox", "");
     renderPreview(d);
     show("editView");
+    // Jos lähetys on kesken, palataan seuraamaan sitä
+    if (d.status === "lahetys_kesken") {
+      const r = await api("/drafts/" + d.id + "/job");
+      if (r.job) pollJob(r.job.id);
+    }
   } catch (e) {
-    msg("loginMsg", e.message);
+    msg("actionMsg", e.message);
   }
 }
 
@@ -259,19 +271,34 @@ async function save() {
   }
 }
 
-function renderPreview(d) {
+async function renderPreview(d) {
   if (!d || !d.preview_url) return;
-  $("preview").src = d.preview_url + "&r=" + Date.now();
+  // Haetaan HTML tekstinä ja renderöidään sandbox-iframeen: Supabase tarjoilee sen
+  // text/plainina (näkyisi lähdekoodina .src-latauksella), ja tyhjä sandbox antaa
+  // iframelle oman opaakin originin, joten esikatselu ei pääse käsiksi avaimeen.
+  try {
+    const html = await (await fetch(d.preview_url + "&r=" + Date.now())).text();
+    $("preview").srcdoc = html;
+  } catch (_) {
+    $("preview").srcdoc = "<p style='font-family:sans-serif;padding:20px'>Esikatselua ei voitu ladata.</p>";
+  }
   $("previewCard").classList.remove("hide");
-  const approver = ME && ME.role === "approver";
-  const sent = d.status === "lahetetty" || d.status === "lahetys_kesken";
-  $("approveBtn").classList.toggle("hide", !approver || sent);
-  $("rejectBtn").classList.toggle("hide", !approver || sent);
-  $("sendBtn").classList.toggle("hide", !approver || sent);
-  $("approvalBtn").classList.toggle("hide", sent);
+  updateActionButtons(d.status);
   if (ME && ME.test_domains && !$("testTo").placeholder.includes(ME.test_domains[0])) {
     $("testTo").placeholder = "oma.osoite@" + ME.test_domains[0];
   }
+}
+
+// Napit näkyvät sekä roolin ETTÄ kirjeen tilan mukaan
+function updateActionButtons(status) {
+  const approver = ME && ME.role === "approver";
+  const locked = status === "lahetetty" || status === "lahetys_kesken";
+  $("approvalBtn").classList.toggle("hide", locked || status === "lahetetty");
+  $("approveBtn").classList.toggle("hide",
+    !approver || !["luonnos", "hyvaksyntapyynto", "hylatty"].includes(status));
+  $("rejectBtn").classList.toggle("hide",
+    !approver || !["luonnos", "hyvaksyntapyynto", "hyvaksytty"].includes(status));
+  $("sendBtn").classList.toggle("hide", !approver || status !== "hyvaksytty");
 }
 
 async function testSend() {
@@ -302,6 +329,7 @@ async function decide(action) {
   try {
     const r = await api("/drafts/" + CUR.id + "/" + action, { method: "POST" });
     CUR.status = r.status;
+    updateActionButtons(r.status);
     msg("actionMsg", action === "approve"
       ? "Hyväksytty. Voit nyt lähettää yleisölle."
       : "Kirje hylätty.", "ok");
