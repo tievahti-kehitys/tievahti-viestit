@@ -1,0 +1,71 @@
+:root {
+  --bg:#F7F8F5; --card:#FFFFFF; --ink:#3C403B; --muted:#75796F; --line:#E3E6DD;
+  --green:#7FC646; --green-ink:#4E8A1F; --cyan-soft:#E2F6FD; --amber-soft:#FDF3DF;
+  --ok-soft:#EDF7E2; --red:#C4443B; --red-soft:#FBEAE8; --chip:#EFF1EA;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg:#1D201C; --card:#262A24; --ink:#E5E8E0; --muted:#A2A79A; --line:#3A3F36;
+    --green:#7FC646; --green-ink:#A5DB74; --cyan-soft:#17333D; --amber-soft:#3B3323;
+    --ok-soft:#2A3822; --red:#F09189; --red-soft:#3C2422; --chip:#30342C;
+  }
+}
+* { box-sizing:border-box; }
+body { margin:0; background:var(--bg); color:var(--ink);
+  font-family:Poppins,Arial,Helvetica,sans-serif; line-height:1.55; }
+main { max-width:720px; margin:0 auto; padding:20px 16px 60px; }
+h1 { font-size:22px; margin:0 0 2px; }
+h2 { font-size:13px; text-transform:uppercase; letter-spacing:.09em; color:var(--muted);
+  margin:28px 0 10px; font-weight:600; }
+h2.tight { margin-top:16px; }
+h3 { margin:0; font-size:15px; font-weight:600; }
+p.sub { color:var(--muted); font-size:13px; margin:0 0 16px; }
+p.small { font-size:12px; color:var(--muted); margin:6px 0 0; }
+.card { background:var(--card); border:1px solid var(--line); border-radius:12px;
+  padding:16px; margin-bottom:12px; }
+label { display:block; font-size:13px; font-weight:600; margin:12px 0 4px; }
+label.check { font-weight:400; display:flex; align-items:center; gap:8px; }
+label.check input { width:auto; }
+input, select, textarea { width:100%; padding:11px 12px; font:inherit; font-size:15px;
+  color:var(--ink); background:var(--card); border:1px solid var(--line); border-radius:9px; }
+textarea { min-height:90px; resize:vertical; }
+textarea.short { min-height:60px; }
+input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible {
+  outline:2px solid var(--green); outline-offset:2px; }
+button { font:inherit; font-size:15px; font-weight:600; padding:12px 18px; border-radius:9px;
+  border:1px solid var(--line); background:var(--card); color:var(--ink); cursor:pointer; }
+button.primary { background:var(--green); border-color:var(--green); color:#fff; }
+button.danger { background:var(--red); border-color:var(--red); color:#fff; }
+button.ghost { background:transparent; }
+button:disabled { opacity:.45; cursor:not-allowed; }
+.row { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; align-items:center; }
+.grow { flex:1 1 180px; width:auto; }
+.aud { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:8px; }
+.aud div { background:var(--card); border:1px solid var(--line); border-radius:10px;
+  padding:10px 12px; }
+.aud b { display:block; font-size:22px; color:var(--green-ink);
+  font-variant-numeric:tabular-nums; }
+.aud span { font-size:12px; color:var(--muted); }
+.item { display:flex; justify-content:space-between; align-items:flex-start; gap:10px;
+  background:var(--card); border:1px solid var(--line); border-radius:10px;
+  padding:12px 14px; margin-bottom:8px; cursor:pointer; text-align:left; width:100%; }
+.item small { color:var(--muted); display:block; margin-top:2px; }
+.chip { font-size:11px; padding:3px 9px; border-radius:999px; background:var(--chip);
+  white-space:nowrap; }
+.c-hyvaksyntapyynto { background:var(--amber-soft); }
+.c-hyvaksytty { background:var(--ok-soft); color:var(--green-ink); }
+.c-lahetys_kesken { background:var(--amber-soft); }
+.c-lahetetty { background:var(--cyan-soft); }
+.c-hylatty { background:var(--red-soft); color:var(--red); }
+iframe { width:100%; height:520px; border:1px solid var(--line); border-radius:10px;
+  background:#fff; margin-top:10px; }
+.msgbox:empty { display:none; }
+.msg { padding:11px 13px; border-radius:9px; font-size:14px; margin-top:12px;
+  white-space:pre-wrap; }
+.msg.err { background:var(--red-soft); color:var(--red); }
+.msg.ok { background:var(--ok-soft); color:var(--green-ink); }
+.msg ul { margin:6px 0 0; padding-left:20px; }
+.blk { border:1px dashed var(--line); border-radius:9px; padding:10px; margin-top:10px; }
+.hide { display:none; }
+.gate { font-size:12px; color:var(--muted); margin-top:22px; border-top:1px solid var(--line);
+  padding-top:12px; }
