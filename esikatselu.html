@@ -1,0 +1,28 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<!-- Sama tiukka CSP kuin kirjepajassa. Esikatselu haetaan tekstinä ja renderöidään
+     tyhjällä sandboxilla (opaakki origin), joten kirjeen sisältö ei pääse sivun
+     kontekstiin. Sivu ei sisällä salaisuuksia; token on linkissä. -->
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; connect-src https://uzaaynqxbfpjxgvetgam.supabase.co; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src https: data:; base-uri 'none'; form-action 'none'" />
+<title>Tievahdin kirje – esikatselu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" />
+<link rel="stylesheet" href="kirjepaja.css" />
+<link rel="stylesheet" href="esikatselu.css" />
+</head>
+<body>
+<main>
+  <h1>Kirjeen esikatselu</h1>
+  <p class="sub" id="status">Ladataan…</p>
+  <div class="card">
+    <iframe id="preview" class="tall" title="Kirjeen esikatselu" sandbox="" referrerpolicy="no-referrer"></iframe>
+    <p class="small">Näin kirje näyttää vastaanottajan saapuneissa. Linkit eivät toimi esikatselussa.</p>
+  </div>
+</main>
+<script src="esikatselu.js"></script>
+</body>
+</html>
