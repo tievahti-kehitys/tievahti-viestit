@@ -1,0 +1,359 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Tievahdin kirjepaja</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" />
+<style>
+  :root {
+    --bg:#F7F8F5; --card:#FFFFFF; --ink:#3C403B; --muted:#75796F; --line:#E3E6DD;
+    --green:#7FC646; --green-ink:#4E8A1F; --cyan:#22C3F3; --cyan-soft:#E2F6FD;
+    --amber:#FEAD2D; --amber-soft:#FDF3DF; --ok-soft:#EDF7E2; --red:#C4443B; --red-soft:#FBEAE8;
+    --chip:#EFF1EA;
+  }
+  @media (prefers-color-scheme: dark) {
+    :root:not([data-theme="light"]) {
+      --bg:#1D201C; --card:#262A24; --ink:#E5E8E0; --muted:#A2A79A; --line:#3A3F36;
+      --green:#7FC646; --green-ink:#A5DB74; --cyan:#22C3F3; --cyan-soft:#17333D;
+      --amber:#FEAD2D; --amber-soft:#3B3323; --ok-soft:#2A3822; --red:#F09189; --red-soft:#3C2422;
+      --chip:#30342C;
+    }
+  }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink);
+    font-family:Poppins,Arial,Helvetica,sans-serif; line-height:1.55; }
+  main { max-width:720px; margin:0 auto; padding:20px 16px 60px; }
+  h1 { font-size:22px; margin:0 0 2px; }
+  h2 { font-size:13px; text-transform:uppercase; letter-spacing:.09em; color:var(--muted);
+    margin:28px 0 10px; font-weight:600; }
+  p.sub { color:var(--muted); font-size:13px; margin:0 0 16px; }
+  .card { background:var(--card); border:1px solid var(--line); border-radius:12px;
+    padding:16px; margin-bottom:12px; }
+  label { display:block; font-size:13px; font-weight:600; margin:12px 0 4px; }
+  input, select, textarea { width:100%; padding:11px 12px; font:inherit; font-size:15px;
+    color:var(--ink); background:var(--card); border:1px solid var(--line); border-radius:9px; }
+  textarea { min-height:90px; resize:vertical; }
+  input:focus-visible, select:focus-visible, textarea:focus-visible, button:focus-visible {
+    outline:2px solid var(--green); outline-offset:2px; }
+  button { font:inherit; font-size:15px; font-weight:600; padding:12px 18px; border-radius:9px;
+    border:1px solid var(--line); background:var(--card); color:var(--ink); cursor:pointer; }
+  button.primary { background:var(--green); border-color:var(--green); color:#fff; }
+  button.danger { background:var(--red); border-color:var(--red); color:#fff; }
+  button.ghost { background:transparent; }
+  button:disabled { opacity:.45; cursor:not-allowed; }
+  .row { display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+  .aud { display:grid; grid-template-columns:repeat(auto-fit,minmax(140px,1fr)); gap:8px; }
+  .aud div { background:var(--card); border:1px solid var(--line); border-radius:10px; padding:10px 12px; }
+  .aud b { display:block; font-size:22px; color:var(--green-ink); font-variant-numeric:tabular-nums; }
+  .aud span { font-size:12px; color:var(--muted); }
+  .item { display:flex; justify-content:space-between; align-items:flex-start; gap:10px;
+    background:var(--card); border:1px solid var(--line); border-radius:10px;
+    padding:12px 14px; margin-bottom:8px; cursor:pointer; text-align:left; width:100%; }
+  .item h3 { margin:0; font-size:15px; font-weight:600; }
+  .item small { color:var(--muted); }
+  .chip { font-size:11px; padding:3px 9px; border-radius:999px; background:var(--chip);
+    white-space:nowrap; }
+  .c-luonnos { background:var(--chip); }
+  .c-hyvaksyntapyynto { background:var(--amber-soft); }
+  .c-hyvaksytty { background:var(--ok-soft); color:var(--green-ink); }
+  .c-lahetetty { background:var(--cyan-soft); }
+  .c-hylatty { background:var(--red-soft); color:var(--red); }
+  iframe { width:100%; height:520px; border:1px solid var(--line); border-radius:10px;
+    background:#fff; margin-top:10px; }
+  .msg { padding:11px 13px; border-radius:9px; font-size:14px; margin-top:12px; }
+  .msg.err { background:var(--red-soft); color:var(--red); }
+  .msg.ok { background:var(--ok-soft); color:var(--green-ink); }
+  .msg ul { margin:6px 0 0; padding-left:20px; }
+  .hide { display:none; }
+  .blocks .blk { border:1px dashed var(--line); border-radius:9px; padding:10px; margin-top:10px; }
+  .blocks .blk .row { margin-top:8px; }
+  .gate { font-size:12px; color:var(--muted); margin-top:22px; border-top:1px solid var(--line);
+    padding-top:12px; }
+</style>
+</head>
+<body>
+<main>
+  <h1>Tievahdin kirjepaja</h1>
+  <p class="sub" id="whoami">Kirjaudu API-avaimella</p>
+
+  <!-- Kirjautuminen -->
+  <section id="login" class="card">
+    <label for="key">API-avain</label>
+    <input id="key" type="password" placeholder="tvk_..." autocomplete="current-password" />
+    <div class="row"><button class="primary" onclick="login()">Kirjaudu</button></div>
+    <div id="loginMsg"></div>
+  </section>
+
+  <!-- Näkymä: lista -->
+  <section id="listView" class="hide">
+    <h2>Kohdeyleisöt</h2>
+    <div class="aud" id="auds"></div>
+
+    <h2>Kirjeet</h2>
+    <div id="list"></div>
+    <div class="row">
+      <button class="primary" onclick="newDraft()">+ Uusi kirje</button>
+      <button class="ghost" onclick="loadAll()">Päivitä</button>
+      <button class="ghost" onclick="logout()">Kirjaudu ulos</button>
+    </div>
+  </section>
+
+  <!-- Näkymä: muokkaus -->
+  <section id="editView" class="hide">
+    <div class="row"><button class="ghost" onclick="showList()">&larr; Takaisin</button></div>
+    <div class="card">
+      <label for="stream">Kohdeyleisö</label>
+      <select id="stream"></select>
+      <label for="subject">Aihe (näkyy saapuneissa)</label>
+      <input id="subject" />
+      <label for="preheader">Preheader (40–100 merkkiä)</label>
+      <textarea id="preheader" style="min-height:60px"></textarea>
+      <label for="heading">Pääotsikko kirjeessä</label>
+      <input id="heading" />
+      <label for="hero_url">Hero-kuvan URL (valinnainen)</label>
+      <input id="hero_url" placeholder="https://..." />
+      <label for="hero_alt">Hero-kuvan alt-teksti</label>
+      <input id="hero_alt" />
+      <h2 style="margin-bottom:0">Sisältölohkot</h2>
+      <div class="blocks" id="blocks"></div>
+      <div class="row"><button class="ghost" onclick="addBlock()">+ Lisää lohko</button></div>
+      <label for="cta_label">Napin teksti</label>
+      <input id="cta_label" />
+      <label for="cta_url">Napin URL</label>
+      <input id="cta_url" placeholder="https://..." />
+      <label for="footer_reason">Footerin tilaussyy</label>
+      <textarea id="footer_reason" style="min-height:60px"></textarea>
+      <div class="row">
+        <button class="primary" onclick="save()">Tallenna ja esikatsele</button>
+      </div>
+      <div id="editMsg"></div>
+    </div>
+
+    <div id="previewCard" class="card hide">
+      <h2 style="margin-top:0">Esikatselu</h2>
+      <iframe id="preview" title="Kirjeen esikatselu"></iframe>
+      <div class="row">
+        <input id="testTo" placeholder="testi@tievahti.fi" style="flex:1 1 180px" />
+        <button onclick="testSend()">Testilähetys</button>
+      </div>
+      <div class="row">
+        <button onclick="requestApproval()">Pyydä hyväksyntä Villeltä</button>
+        <span id="approverBtns"></span>
+      </div>
+      <div id="actionMsg"></div>
+    </div>
+  </section>
+
+  <p class="gate">Testilähetykset menevät vain sisäisiin osoitteisiin. Oikean lähetyksen
+  voi laukaista vain hyväksyjä, ja vain hyväksytystä kirjeestä. Estolistalla olevat
+  eivät saa postia koskaan.</p>
+</main>
+
+<script>
+const API = "https://uzaaynqxbfpjxgvetgam.supabase.co/functions/v1/kirjepalvelu";
+let KEY = localStorage.getItem("tvk_key") || "";
+let ROLE = localStorage.getItem("tvk_role") || "editor";
+let CUR = null;            // nykyinen luonnos
+let AUDS = [];
+const $ = (id) => document.getElementById(id);
+
+async function api(path, opts = {}) {
+  const res = await fetch(API + path, {
+    ...opts,
+    headers: { Authorization: "Bearer " + KEY, "Content-Type": "application/json" },
+  });
+  const data = await res.json().catch(() => ({}));
+  if (!res.ok) throw Object.assign(new Error(data.error || ("HTTP " + res.status)), { data });
+  return data;
+}
+function msg(el, text, kind = "err", list = []) {
+  $(el).innerHTML = text
+    ? `<div class="msg ${kind}">${text}${list.length ? "<ul>" + list.map((i) => "<li>" + i + "</li>").join("") + "</ul>" : ""}</div>`
+    : "";
+}
+
+async function login() {
+  KEY = $("key").value.trim();
+  try {
+    const a = await api("/audiences");
+    AUDS = a.audiences;
+    localStorage.setItem("tvk_key", KEY);
+    // Rooli päätellään: hyväksyjä pääsee hyväksymään
+    ROLE = "editor";
+    try {
+      await api("/drafts/00000000-0000-0000-0000-000000000000/approve", { method: "POST" });
+    } catch (e) {
+      if (!/hyväksyjä/i.test(e.message)) ROLE = "approver";
+    }
+    localStorage.setItem("tvk_role", ROLE);
+    msg("loginMsg", "");
+    await loadAll();
+    showList();
+  } catch (e) {
+    msg("loginMsg", e.message);
+  }
+}
+function logout() {
+  localStorage.removeItem("tvk_key");
+  localStorage.removeItem("tvk_role");
+  location.reload();
+}
+
+async function loadAll() {
+  const [a, d] = await Promise.all([api("/audiences"), api("/drafts")]);
+  AUDS = a.audiences;
+  $("auds").innerHTML = AUDS.map((x) =>
+    `<div><b>${x.recipients.toLocaleString("fi-FI")}</b><span>${x.label}</span></div>`).join("");
+  $("stream").innerHTML = AUDS.map((x) =>
+    `<option value="${x.stream}">${x.label} (${x.recipients.toLocaleString("fi-FI")})</option>`).join("");
+  $("list").innerHTML = d.drafts.length
+    ? d.drafts.map((x) => {
+        const errs = (x.validation && x.validation.errors || []).length;
+        return `<button class="item" onclick="open_('${x.id}')">
+          <span><h3>${x.subject || "(nimetön)"}</h3>
+          <small>${(AUDS.find((a2) => a2.stream === x.stream) || {}).label || x.stream}
+          · ${x.created_by}${errs ? " · " + errs + " virhettä" : ""}</small></span>
+          <span class="chip c-${x.status}">${x.status}</span></button>`;
+      }).join("")
+    : `<div class="card">Ei kirjeitä vielä. Aloita napista "Uusi kirje".</div>`;
+  $("whoami").textContent = ROLE === "approver"
+    ? "Kirjautunut hyväksyjänä — voit hyväksyä ja lähettää."
+    : "Kirjautunut sisällöntuottajana — testilähetykset ja hyväksyntäpyynnöt.";
+}
+
+function showList() { $("login").classList.add("hide"); $("editView").classList.add("hide"); $("listView").classList.remove("hide"); }
+function showEdit() { $("login").classList.add("hide"); $("listView").classList.add("hide"); $("editView").classList.remove("hide"); }
+
+function blockEl(b = {}) {
+  const d = document.createElement("div");
+  d.className = "blk";
+  d.innerHTML = `
+    <label>Lohkon tyyli</label>
+    <select class="b-type">
+      <option value="text">Tavallinen teksti</option>
+      <option value="fakta">Vaalean vihreä nosto (fakta/lista)</option>
+      <option value="nosto">Vaalean oranssi nosto (tarjous)</option>
+    </select>
+    <label>Väliotsikko (valinnainen)</label>
+    <input class="b-heading" />
+    <label>Teksti (tyhjä rivi = uusi kappale)</label>
+    <textarea class="b-text"></textarea>
+    <label>Luettelo, yksi kohta per rivi (valinnainen)</label>
+    <textarea class="b-items" style="min-height:60px"></textarea>
+    <div class="row"><button class="ghost" onclick="this.closest('.blk').remove()">Poista lohko</button></div>`;
+  d.querySelector(".b-type").value = b.type || "text";
+  d.querySelector(".b-heading").value = b.heading || "";
+  d.querySelector(".b-text").value = b.text || "";
+  d.querySelector(".b-items").value = (b.items || []).join("\n");
+  return d;
+}
+function addBlock(b) { $("blocks").appendChild(blockEl(b)); }
+function readBlocks() {
+  return [...$("blocks").querySelectorAll(".blk")].map((d) => ({
+    type: d.querySelector(".b-type").value,
+    heading: d.querySelector(".b-heading").value.trim(),
+    text: d.querySelector(".b-text").value.trim(),
+    items: d.querySelector(".b-items").value.split("\n").map((s) => s.trim()).filter(Boolean),
+  })).filter((b) => b.text || b.items.length || b.heading);
+}
+
+function newDraft() {
+  CUR = null;
+  ["subject", "preheader", "heading", "hero_url", "hero_alt", "cta_label", "cta_url"].forEach((f) => $(f).value = "");
+  $("footer_reason").value = "Sait tämän viestin, koska olet Tievahdin asiakas tai olet tilannut uutiskirjeemme.";
+  $("blocks").innerHTML = "";
+  addBlock();
+  $("previewCard").classList.add("hide");
+  msg("editMsg", ""); msg("actionMsg", "");
+  showEdit();
+}
+
+async function open_(id) {
+  const d = await api("/drafts/" + id);
+  CUR = d;
+  $("stream").value = d.stream;
+  ["subject", "preheader", "heading", "hero_url", "hero_alt", "cta_label", "cta_url", "footer_reason"]
+    .forEach((f) => $(f).value = d[f] || "");
+  $("blocks").innerHTML = "";
+  const blocks = typeof d.body_blocks === "string" ? JSON.parse(d.body_blocks || "[]") : (d.body_blocks || []);
+  (blocks.length ? blocks : [{}]).forEach(addBlock);
+  showPreview(d);
+  showEdit();
+}
+
+function payload() {
+  return {
+    stream: $("stream").value, subject: $("subject").value.trim(),
+    preheader: $("preheader").value.trim(), heading: $("heading").value.trim(),
+    body_blocks: readBlocks(), cta_label: $("cta_label").value.trim(),
+    cta_url: $("cta_url").value.trim(), hero_url: $("hero_url").value.trim(),
+    hero_alt: $("hero_alt").value.trim(), footer_reason: $("footer_reason").value.trim(),
+  };
+}
+
+async function save() {
+  try {
+    const body = JSON.stringify(payload());
+    const r = CUR
+      ? await api("/drafts/" + CUR.id, { method: "PATCH", body })
+      : await api("/drafts", { method: "POST", body });
+    CUR = { ...(CUR || {}), ...r };
+    showPreview(r);
+    const v = r.validation || { errors: [], warnings: [] };
+    if (v.errors.length) msg("editMsg", "Korjaa ennen hyväksyntää:", "err", v.errors);
+    else if (v.warnings.length) msg("editMsg", "Tallennettu. Huomioi:", "ok", v.warnings);
+    else msg("editMsg", "Tallennettu — kirje läpäisi tarkistukset.", "ok");
+    loadAll();
+  } catch (e) { msg("editMsg", e.message, "err", (e.data && e.data.validation && e.data.validation.errors) || []); }
+}
+
+function showPreview(d) {
+  if (!d.preview_url) return;
+  $("preview").src = d.preview_url + "&r=" + Date.now();
+  $("previewCard").classList.remove("hide");
+  $("approverBtns").innerHTML = ROLE === "approver"
+    ? `<button onclick="approve()">Hyväksy</button>
+       <button class="danger" onclick="sendReal()">Lähetä yleisölle</button>`
+    : "";
+}
+
+async function testSend() {
+  const to = $("testTo").value.trim();
+  if (!to) return msg("actionMsg", "Anna sisäinen testiosoite.");
+  try {
+    if (!CUR || !CUR.id) return msg("actionMsg", "Tallenna kirje ensin.");
+    await api("/drafts/" + CUR.id + "/test", { method: "POST", body: JSON.stringify({ to }) });
+    msg("actionMsg", "Testikirje lähetetty osoitteeseen " + to, "ok");
+  } catch (e) { msg("actionMsg", e.message, "err", (e.data && e.data.validation && e.data.validation.errors) || []); }
+}
+async function requestApproval() {
+  try {
+    const r = await api("/drafts/" + CUR.id + "/request-approval", { method: "POST" });
+    msg("actionMsg", "Hyväksyntäpyyntö lähetetty. Tila: " + r.status, "ok");
+    loadAll();
+  } catch (e) { msg("actionMsg", e.message, "err", (e.data && e.data.validation && e.data.validation.errors) || []); }
+}
+async function approve() {
+  try {
+    const r = await api("/drafts/" + CUR.id + "/approve", { method: "POST" });
+    msg("actionMsg", "Hyväksytty. Voit nyt lähettää.", "ok");
+    CUR.status = r.status; loadAll();
+  } catch (e) { msg("actionMsg", e.message); }
+}
+async function sendReal() {
+  const aud = AUDS.find((a) => a.stream === $("stream").value) || { recipients: "?", label: "" };
+  const t = prompt(`Lähetetään ${aud.recipients} vastaanottajalle (${aud.label}).\nTätä ei voi peruuttaa.\nKirjoita LÄHETÄ vahvistukseksi:`);
+  if (t !== "LÄHETÄ") return msg("actionMsg", "Lähetys peruttu.");
+  try {
+    const r = await api("/drafts/" + CUR.id + "/send", { method: "POST" });
+    msg("actionMsg", `Lähetys käynnissä: ${r.total} vastaanottajaa (kampanja ${r.campaign}).`, "ok");
+    loadAll();
+  } catch (e) { msg("actionMsg", e.message); }
+}
+
+if (KEY) { $("key").value = KEY; login(); }
+</script>
+</body>
+</html>

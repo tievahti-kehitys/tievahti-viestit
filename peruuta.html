@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="fi">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<meta name="robots" content="noindex, nofollow" />
+<title>Peruuta tilaus — Tievahti</title>
+<link rel="preconnect" href="https://fonts.googleapis.com" />
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;600;700&display=swap" />
+<style>
+  :root { --ink:#505050; --bg:#F7F7F7; --card:#FFFFFF; --green:#7FC646; --green-ink:#4E8A1F;
+    --line:#E3E6DD; --muted:#75796F; --red:#C4443B; }
+  * { box-sizing:border-box; }
+  body { margin:0; background:var(--bg); color:var(--ink);
+    font-family:Poppins,Arial,Helvetica,sans-serif; line-height:1.6;
+    display:flex; align-items:center; justify-content:center; min-height:100vh; padding:24px 16px; }
+  main { background:var(--card); border:1px solid var(--line); border-radius:14px;
+    padding:36px 28px; max-width:460px; width:100%; text-align:center;
+    box-shadow:0 2px 10px rgba(0,0,0,.05); }
+  img.logo { width:170px; max-width:60%; height:auto; margin:0 auto 22px; display:block; }
+  h1 { font-size:21px; margin:0 0 10px; }
+  p { margin:0 0 18px; }
+  p.small { font-size:13px; color:var(--muted); margin:18px 0 0; }
+  button { font:inherit; font-size:16px; font-weight:700; color:#fff; background:var(--green);
+    border:0; border-radius:9px; padding:15px 30px; cursor:pointer; width:100%; }
+  button:disabled { opacity:.5; cursor:progress; }
+  button:focus-visible { outline:3px solid var(--green-ink); outline-offset:2px; }
+  .err { color:var(--red); }
+  .hide { display:none; }
+  a { color:var(--green-ink); }
+</style>
+</head>
+<body>
+<main>
+  <img class="logo" alt="Tievahti"
+    src="https://uzaaynqxbfpjxgvetgam.supabase.co/storage/v1/object/public/kampanjakuvat/brand/tievahti-logo-email.png" />
+
+  <div id="confirm" class="hide">
+    <h1>Perutaanko tilaus?</h1>
+    <p>Jos et enää halua Tievahdin viestejä, vahvista alla. Poistamme sinut heti
+       postituslistalta.</p>
+    <button id="btn" type="button">Peruuta tilaus</button>
+    <p class="small">Jos päädyit tänne vahingossa, voit vain sulkea tämän sivun.</p>
+  </div>
+
+  <div id="done" class="hide">
+    <h1>Tilaus on peruttu</h1>
+    <p>Et saa meiltä enää markkinointiviestejä. Kiitos, että olit mukana.</p>
+    <p class="small">Muutos on jo voimassa. Palveluihin liittyvät asiakasviestit
+       eivät kuulu markkinointitilaukseen.</p>
+  </div>
+
+  <div id="bad" class="hide">
+    <h1>Linkki ei kelpaa</h1>
+    <p>Linkki on vanhentunut tai puutteellinen, joten emme voi varmistaa kenen tilaus
+       peruttaisiin.</p>
+    <p class="small">Lähetä viesti osoitteeseen
+       <a href="mailto:info@tievahti.fi">info@tievahti.fi</a>, niin hoidamme asian
+       puolestasi.</p>
+  </div>
+
+  <div id="fail" class="hide">
+    <h1>Jokin meni pieleen</h1>
+    <p class="err">Peruutus ei onnistunut juuri nyt.</p>
+    <p class="small">Yritä hetken päästä uudelleen tai lähetä viesti osoitteeseen
+       <a href="mailto:info@tievahti.fi">info@tievahti.fi</a>.</p>
+  </div>
+</main>
+
+<script>
+  var API = "https://uzaaynqxbfpjxgvetgam.supabase.co/functions/v1/unsubscribe";
+  var q = new URLSearchParams(location.search);
+  var e = q.get("e") || "";
+  var t = q.get("t") || "";
+  var show = function (id) {
+    ["confirm", "done", "bad", "fail"].forEach(function (x) {
+      document.getElementById(x).classList.toggle("hide", x !== id);
+    });
+  };
+
+  if (!e || !t) show("bad");
+  else show("confirm");
+
+  document.getElementById("btn").addEventListener("click", function () {
+    var btn = this;
+    btn.disabled = true;
+    btn.textContent = "Perutaan…";
+    fetch(API + "?e=" + encodeURIComponent(e) + "&t=" + encodeURIComponent(t), {
+      method: "POST",
+      headers: { "Content-Type": "application/json", "Accept": "application/json" },
+      body: JSON.stringify({ source: "sivu" }),
+    }).then(function (r) {
+      return r.json().then(function (d) { return { ok: r.ok, d: d }; });
+    }).then(function (res) {
+      if (res.ok && res.d.ok) show("done");
+      else if (res.d && res.d.error === "invalid_link") show("bad");
+      else show("fail");
+    }).catch(function () {
+      show("fail");
+      btn.disabled = false;
+      btn.textContent = "Peruuta tilaus";
+    });
+  });
+</script>
+</body>
+</html>
