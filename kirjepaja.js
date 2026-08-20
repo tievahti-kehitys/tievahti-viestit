@@ -237,14 +237,24 @@ async function openDraft(id) {
     msg("editMsg", ""); msg("actionMsg", ""); msg("jobBox", "");
     renderPreview(d);
     show("editView");
-    // Jos lähetys on kesken, palataan seuraamaan sitä
+    // Jos lähetys on kesken tai keskeytynyt, palataan seuraamaan/jatkamaan sitä
     if (d.status === "lahetys_kesken") {
       const r = await api("/drafts/" + d.id + "/job");
-      if (r.job) pollJob(r.job.id);
+      if (r.job) reflectJob(r.job);
     }
   } catch (e) {
     msg("actionMsg", e.message);
   }
+}
+
+// Näyttää työn tilan ja tarjoaa jatkon, jos työ on keskeytynyt
+function reflectJob(job) {
+  const stuck = job.status === "interrupted" || job.status === "error";
+  msg("jobBox", "Lähetystyö: " + job.status + " — lähetetty " + job.sent + "/" + job.total +
+    (Number(job.failed) ? ", epäonnistui " + job.failed : ""), stuck ? "err" : "ok");
+  const canResume = stuck && ME && ME.role === "approver";
+  $("resumeBtn").classList.toggle("hide", !canResume);
+  if (job.status === "running") pollJob(job.id);
 }
 
 function payload() {
@@ -299,6 +309,8 @@ function updateActionButtons(status) {
   $("rejectBtn").classList.toggle("hide",
     !approver || !["luonnos", "hyvaksyntapyynto", "hyvaksytty"].includes(status));
   $("sendBtn").classList.toggle("hide", !approver || status !== "hyvaksytty");
+  // Resume-nappi paljastetaan vain työn tilan perusteella (reflectJob/pollJob)
+  if (status !== "lahetys_kesken") $("resumeBtn").classList.add("hide");
 }
 
 async function testSend() {
@@ -365,12 +377,31 @@ function pollJob(jobId) {
       if (["done", "error", "interrupted"].includes(j.status)) {
         clearInterval(jobTimer);
         jobTimer = null;
+        // Keskeytynyt työ voidaan jatkaa; valmis/virhe palauttaa napit normaaliksi
+        const canResume = (j.status === "interrupted" || j.status === "error")
+          && ME && ME.role === "approver";
+        $("resumeBtn").classList.toggle("hide", !canResume);
         loadAll();
       }
     } catch (_) { /* ohitetaan yksittäinen kysely */ }
   };
   tick();
   jobTimer = setInterval(tick, 5000);
+}
+
+async function resumeSend() {
+  if (!CUR || !CUR.id) return;
+  $("resumeBtn").disabled = true;
+  try {
+    const r = await api("/drafts/" + CUR.id + "/resume", { method: "POST" });
+    $("resumeBtn").classList.add("hide");
+    msg("actionMsg", "Lähetystä jatketaan: " + (r.total || "?") + " vastaanottajaa.", "ok");
+    pollJob(r.job_id);
+  } catch (e) {
+    msg("actionMsg", e.message, "err", e.details);
+  } finally {
+    $("resumeBtn").disabled = false;
+  }
 }
 
 // ---------- käsittelijät ----------
@@ -387,6 +418,7 @@ $("approvalBtn").addEventListener("click", requestApproval);
 $("approveBtn").addEventListener("click", () => decide("approve"));
 $("rejectBtn").addEventListener("click", () => decide("reject"));
 $("sendBtn").addEventListener("click", sendReal);
+$("resumeBtn").addEventListener("click", resumeSend);
 
 if (KEY) {
   $("key").value = KEY;
