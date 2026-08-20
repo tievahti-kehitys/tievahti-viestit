@@ -7,7 +7,7 @@
 <!-- Sama tiukka CSP kuin kirjepajassa. Esikatselu haetaan tekstinä ja renderöidään
      tyhjällä sandboxilla (opaakki origin), joten kirjeen sisältö ei pääse sivun
      kontekstiin. Sivu ei sisällä salaisuuksia; token on linkissä. -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; connect-src https://uzaaynqxbfpjxgvetgam.supabase.co; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src https: data:; base-uri 'none'; form-action 'none'" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; connect-src https://uzaaynqxbfpjxgvetgam.supabase.co; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src https: data:; base-uri 'none'; form-action 'none'" />
 <title>Tievahdin kirje – esikatselu</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" />

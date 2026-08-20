@@ -7,7 +7,7 @@
 <!-- Tiukka CSP: ei inline-skriptejä, ei ulkoisia yhteyksiä muualle kuin omaan API:in.
      Tämä katkaisee XSS-ketjun, jolla sisältöä syöttävä käyttäjä voisi varastaa
      hyväksyjän API-avaimen (turvakatselmus 20.8.2026). -->
-<meta http-equiv="Content-Security-Policy" content="default-src 'none'; connect-src https://uzaaynqxbfpjxgvetgam.supabase.co; script-src 'self'; style-src 'self' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src https: data:; frame-src https://uzaaynqxbfpjxgvetgam.supabase.co; base-uri 'none'; form-action 'none'" />
+<meta http-equiv="Content-Security-Policy" content="default-src 'none'; connect-src https://uzaaynqxbfpjxgvetgam.supabase.co; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src https://fonts.gstatic.com; img-src https: data:; frame-src https://uzaaynqxbfpjxgvetgam.supabase.co; base-uri 'none'; form-action 'none'" />
 <title>Tievahdin kirjepaja</title>
 <link rel="preconnect" href="https://fonts.googleapis.com" />
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600;700&display=swap" />
