@@ -58,10 +58,21 @@
       <div id="blocks"></div>
       <div class="row"><button id="addBlockBtn" class="ghost" type="button">+ Lisää lohko</button></div>
 
+      <h2 class="tight">Toimintakutsu (CTA-laatikko)</h2>
+      <label for="cta_heading">Laatikon otsikko (valinnainen, esim. "Hyödynnä etu 30.9. mennessä")</label>
+      <input id="cta_heading" />
+      <label for="cta_text">Laatikon saateteksti nappien yläpuolelle (valinnainen)</label>
+      <textarea id="cta_text" class="short"></textarea>
       <label for="cta_label">Napin teksti</label>
       <input id="cta_label" />
       <label for="cta_url">Napin URL</label>
       <input id="cta_url" placeholder="https://…" />
+      <label for="cta2_label">Toisen napin teksti (valinnainen, oranssi nappi kahdelle polulle)</label>
+      <input id="cta2_label" />
+      <label for="cta2_url">Toisen napin URL</label>
+      <input id="cta2_url" placeholder="https://…" />
+
+      <h2 class="tight">Footer</h2>
       <label for="footer_reason">Footerin tilaussyy</label>
       <textarea id="footer_reason" class="short"></textarea>
       <div class="row"><button id="saveBtn" class="primary" type="button">Tallenna ja esikatsele</button></div>

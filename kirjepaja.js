@@ -148,6 +148,19 @@ async function loadAll() {
 }
 
 // ---------- lohkot ----------
+// Sama lohkotyyppijoukko kuin kirjepalvelun BLOCK_TYPES. Aiemmin UI tunsi vain
+// kolme ensimmäistä, jolloin AI:n tekemän kirjeen kuponki/vinkki/askeleet/ehdot
+// muuttuivat tallennettaessa hiljaa tavalliseksi tekstiksi (havaittu 1.9.2026).
+const BLOCK_TYPES = [
+  ["text", "Tavallinen teksti"],
+  ["fakta", "Vihreä nosto (fakta tai lista)"],
+  ["nosto", "Oranssi nosto (tarjous)"],
+  ["kuponki", "Kuponki (iso etu, katkoviivareunus)"],
+  ["vinkki", "Vinkkilaatikko (Hyvä tietää)"],
+  ["askeleet", "Askeleet (numeroitu 1-2-3)"],
+  ["ehdot", "Ehdot (pikkuprintti)"],
+];
+
 function blockEl(b) {
   b = b || {};
   const wrap = document.createElement("div");
@@ -160,8 +173,7 @@ function blockEl(b) {
     return el;
   };
   const type = document.createElement("select");
-  [["text", "Tavallinen teksti"], ["fakta", "Vihreä nosto (fakta tai lista)"],
-    ["nosto", "Oranssi nosto (tarjous)"]].forEach(([v, t]) => {
+  BLOCK_TYPES.forEach(([v, t]) => {
     const o = document.createElement("option");
     o.value = v; o.textContent = t;
     type.appendChild(o);
@@ -191,7 +203,15 @@ function blockEl(b) {
   row.appendChild(del);
   wrap.appendChild(row);
 
-  type.value = b.type || "text";
+  // Tuntematon tyyppi (esim. palvelimelle lisätty uusi lohkotyyppi) säilytetään
+  // omana valintanaan — tallennus ei saa koskaan hiljaa muuttaa sitä tekstiksi.
+  const wanted = b.type || "text";
+  if (!BLOCK_TYPES.some(([v]) => v === wanted)) {
+    const o = document.createElement("option");
+    o.value = wanted; o.textContent = wanted + " (tuntematon tyyppi, säilytetään)";
+    type.appendChild(o);
+  }
+  type.value = wanted;
   heading.value = b.heading || "";
   text.value = b.text || "";
   items.value = (b.items || []).join("\n");
@@ -208,8 +228,10 @@ function readBlocks() {
   })).filter((b) => b.text || b.items.length || b.heading);
 }
 
+// Kaikki kirjepalvelun DRAFT_FIELDS-tekstikentät (stream ja body_blocks käsitellään erikseen).
+// CTA-laatikon otsikko, saateteksti ja toinen nappi puuttuivat aiemmin → eivät näkyneet UI:ssa.
 const FIELDS = ["subject", "preheader", "heading", "hero_url", "hero_alt",
-  "cta_label", "cta_url", "footer_reason"];
+  "cta_heading", "cta_text", "cta_label", "cta_url", "cta2_label", "cta2_url", "footer_reason"];
 
 function newDraft() {
   CUR = null;
