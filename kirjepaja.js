@@ -193,6 +193,31 @@ function blockEl(b) {
   items.className = "b-items short";
   mk("Luettelo, yksi kohta per rivi (valinnainen)", items);
 
+  // Muotoilu on kirjoittajan valinta (4.9.2026): asettelu ja listamerkki.
+  // Nämä pitää olla myös UI:ssa, muuten selaimessa tehty muokkaus pyyhkisi
+  // AI:n tekemän valinnan hiljaa pois (sama vika kuin lohkotyypeissä 1.9.).
+  const valinta = (cls, labelText, vaihtoehdot) => {
+    const s = document.createElement("select");
+    vaihtoehdot.forEach(([v, t]) => {
+      const o = document.createElement("option");
+      o.value = v; o.textContent = t;
+      s.appendChild(o);
+    });
+    s.className = cls;
+    return mk(labelText, s);
+  };
+  const asettelu = valinta("b-asettelu", "Tasaus", [
+    ["", "Oletus (kuponki keskellä, muut vasemmalla)"],
+    ["vasen", "Vasemmalle"],
+    ["keskitetty", "Keskitetty"],
+  ]);
+  const merkki = valinta("b-merkki", "Luettelon merkki", [
+    ["", "Oletus (rasti ✅)"],
+    ["rasti", "Rasti ✅"],
+    ["luoti", "Luotelmapallo •"],
+    ["ei", "Ei merkkiä"],
+  ]);
+
   const row = document.createElement("div");
   row.className = "row";
   const del = document.createElement("button");
@@ -215,6 +240,8 @@ function blockEl(b) {
   heading.value = b.heading || "";
   text.value = b.text || "";
   items.value = (b.items || []).join("\n");
+  asettelu.value = b.asettelu || "";
+  merkki.value = b.merkki || "";
   return wrap;
 }
 
@@ -225,6 +252,8 @@ function readBlocks() {
     text: d.querySelector(".b-text").value.trim(),
     items: d.querySelector(".b-items").value.split("\n")
       .map((s) => s.trim()).filter(Boolean),
+    asettelu: d.querySelector(".b-asettelu").value,
+    merkki: d.querySelector(".b-merkki").value,
   })).filter((b) => b.text || b.items.length || b.heading);
 }
 
@@ -294,9 +323,14 @@ async function save() {
     CUR = Object.assign({}, CUR || {}, r);
     renderPreview(r);
     const v = r.validation || { errors: [], warnings: [] };
-    if (v.errors.length) msg("editMsg", "Korjaa ennen hyväksyntää:", "err", v.errors);
-    else if (v.warnings.length) msg("editMsg", "Tallennettu. Huomioi:", "ok", v.warnings);
-    else msg("editMsg", "Tallennettu — kirje läpäisi tarkistukset.", "ok");
+    // Käyttäjän hyväksymät poikkeamat kerrotaan aina: hyväksyjän pitää tietää,
+    // mikä on tehty tarkoituksella toisin kuin koneisto ehdottaisi.
+    const poikkeamat = (v.poikkeamat || []).map((p) =>
+      "Poikkeama: " + p.saanto + (p.syy ? " — " + p.syy : ""));
+    if (v.errors.length) msg("editMsg", "Korjaa ennen hyväksyntää:", "err", v.errors.concat(poikkeamat));
+    else if (v.warnings.length || poikkeamat.length) {
+      msg("editMsg", "Tallennettu. Huomioi:", "ok", v.warnings.concat(poikkeamat));
+    } else msg("editMsg", "Tallennettu — kirje läpäisi tarkistukset.", "ok");
     loadAll();
   } catch (e) {
     msg("editMsg", e.message, "err", e.details);
@@ -375,9 +409,20 @@ async function decide(action) {
 
 async function sendReal() {
   if (!CUR || !CUR.id) return;
-  const aud = AUDS.find((a) => a.stream === $("stream").value) || { recipients: "?", label: "" };
-  const typed = prompt("Lähetetään " + aud.recipients + " vastaanottajalle (" + aud.label +
-    ").\nTätä ei voi peruuttaa.\nKirjoita LÄHETÄ vahvistukseksi:");
+  // Yleisö luetaan AINA tallennetusta kirjeestä, ei lomakkeen valitsimesta: palvelin
+  // lähettää kirjeen oman stream-arvon mukaan. Aiemmin tämä luki lomakkeen valitsimen,
+  // joten vahvistusdialogi näytti väärän yleisön ja väärän määrän juuri siinä kohdassa,
+  // joka on ihmisen viimeinen tarkistus ennen peruuttamatonta lähetystä. Havaittu
+  // 4.9.2026: dialogi lupasi "8206 (Uutiskirje)" kun lähdössä oli 308 tieisännöitsijää.
+  if ($("stream").value !== CUR.stream) {
+    return msg("actionMsg", "Lomakkeen yleisö (" + $("stream").value + ") ei vastaa tallennettua " +
+      "kirjettä (" + CUR.stream + "). Lataa sivu uudelleen ja avaa kirje listasta ennen lähetystä.", "err");
+  }
+  const aud = AUDS.find((a) => a.stream === CUR.stream) || { recipients: "?", label: CUR.stream };
+  const typed = prompt("Kirje: " + (CUR.subject || "(ei aihetta)") +
+    "\nYleisö: " + aud.label + " (" + CUR.stream + ")" +
+    "\nLähetetään " + aud.recipients + " vastaanottajalle." +
+    "\nTätä ei voi peruuttaa.\nKirjoita LÄHETÄ vahvistukseksi:");
   if (typed !== "LÄHETÄ") return msg("actionMsg", "Lähetys peruttu.");
   try {
     const r = await api("/drafts/" + CUR.id + "/send", { method: "POST" });
