@@ -35,6 +35,10 @@ async function api(path, opts) {
   if (!res.ok) {
     const err = new Error(data.error || ("Palvelin vastasi " + res.status));
     err.details = data.blockers || (data.validation && data.validation.errors) || [];
+    err.status = res.status;
+    // Koko vastaus talteen: portit palauttavat rakenteista tietoa, jonka varassa
+    // käyttäjälle voi esittää oikean kysymyksen (päällekkäisyys, muuttunut sisältö).
+    err.data = data;
     throw err;
   }
   return data;
@@ -385,6 +389,8 @@ async function requestApproval() {
   if (!CUR || !CUR.id) return msg("actionMsg", "Tallenna kirje ensin.");
   try {
     const r = await api("/drafts/" + CUR.id + "/request-approval", { method: "POST" });
+    // Hyväksyntäpyyntö renderöi kirjeen uudelleen, joten tiiviste voi muuttua
+    if (r.html_sha256) CUR.html_sha256 = r.html_sha256;
     msg("actionMsg", "Hyväksyntäpyyntö lähetetty. Tila: " + r.status, "ok");
     loadAll();
   } catch (e) {
@@ -395,7 +401,12 @@ async function requestApproval() {
 async function decide(action) {
   if (!CUR || !CUR.id) return;
   try {
-    const r = await api("/drafts/" + CUR.id + "/" + action, { method: "POST" });
+    // Hyväksyntä sidotaan siihen versioon, jonka hyväksyjä näki: palvelin hylkää
+    // 409:llä, jos kirje on muuttunut katselun ja hyväksynnän välissä (4.9.2026).
+    const body = action === "approve"
+      ? JSON.stringify({ html_sha256: CUR.html_sha256 || "" })
+      : undefined;
+    const r = await api("/drafts/" + CUR.id + "/" + action, { method: "POST", body: body });
     CUR.status = r.status;
     updateActionButtons(r.status);
     msg("actionMsg", action === "approve"
@@ -403,6 +414,13 @@ async function decide(action) {
       : "Kirje hylätty.", "ok");
     loadAll();
   } catch (e) {
+    // Muuttunut sisältö: näytä uusi versio ja ota uusi tiiviste, jotta hyväksyjä
+    // katsoo kirjeen uudelleen ja hyväksyy sen mitä nyt on kannassa.
+    if (action === "approve" && e.data && e.data.html_sha256) {
+      CUR.html_sha256 = e.data.html_sha256;
+      const tuore = await api("/drafts/" + CUR.id).catch(() => null);
+      if (tuore) { CUR = tuore; renderPreview(tuore); }
+    }
     msg("actionMsg", e.message, "err", e.details);
   }
 }
@@ -424,12 +442,30 @@ async function sendReal() {
     "\nLähetetään " + aud.recipients + " vastaanottajalle." +
     "\nTätä ei voi peruuttaa.\nKirjoita LÄHETÄ vahvistukseksi:");
   if (typed !== "LÄHETÄ") return msg("actionMsg", "Lähetys peruttu.");
+  await laheta(false);
+}
+
+// Lähetyskutsu: päällekkäisyysportti (7 pv samalle virralle) kysyy ihmiseltä
+// erikseen, koska kirjepajan oma duplikaattisuoja on vain kirjekohtainen.
+async function laheta(ohitaPaallekkaisyys) {
   try {
-    const r = await api("/drafts/" + CUR.id + "/send", { method: "POST" });
+    const r = await api("/drafts/" + CUR.id + "/send", {
+      method: "POST",
+      body: JSON.stringify(ohitaPaallekkaisyys ? { ohita_paallekkaisyys: true } : {}),
+    });
     msg("actionMsg", "Lähetys käynnistyi: " + r.total + " vastaanottajaa.", "ok");
     pollJob(r.job_id);
     loadAll();
   } catch (e) {
+    if (!ohitaPaallekkaisyys && e.data && e.data.paallekkaisyys) {
+      const rivit = e.data.paallekkaisyys
+        .map((p) => "- " + p.campaign + " (" + p.kpl + " kpl)").join("\n");
+      if (confirm("Samalle yleisölle on lähetetty 7 päivän sisällä:\n" + rivit +
+          "\n\nLähetetäänkö silti? Vastaanottaja saa kaksi kirjettä samalla viikolla.")) {
+        return laheta(true);
+      }
+      return msg("actionMsg", "Lähetys peruttu päällekkäisyyden takia.", "ok");
+    }
     msg("actionMsg", e.message, "err", e.details);
   }
 }
