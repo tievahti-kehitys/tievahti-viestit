@@ -354,21 +354,36 @@ async function renderPreview(d) {
   }
   $("previewCard").classList.remove("hide");
   updateActionButtons(d.status);
-  // Rajaus näkyviin heti kirjeen avatessa, ei vasta lähetysdialogissa: hyväksyjän
-  // on nähtävä ennen Hyväksy-nappia, meneekö kirje koko virralle vai osajoukolle.
-  if (d.segment) {
-    const s = d.segment;
-    const osat = [];
-    if (s.tyyppi === "ei_avannut" && s.kampanja) osat.push("vain ne, jotka eivät avanneet kampanjaa " + s.kampanja);
-    if (s.poissulje_virrat && s.poissulje_virrat.length) osat.push("pois jätetään " + s.poissulje_virrat.join(", "));
-    msg("actionMsg", "RAJATTU LÄHETYS: " + d.vastaanottajia + " vastaanottajaa (koko virta " +
-      d.vastaanottajia_koko_virta + ") — " + osat.join("; "), "ok");
-  } else if (typeof d.vastaanottajia === "number") {
-    msg("actionMsg", "Lähetys koko virralle: " + d.vastaanottajia + " vastaanottajaa.", "ok");
-  }
+  naytaSegmentti(d);
   if (ME && ME.test_domains && !$("testTo").placeholder.includes(ME.test_domains[0])) {
     $("testTo").placeholder = "oma.osoite@" + ME.test_domains[0];
   }
+}
+
+// Kohdeyleisön TODELLINEN koko heti Kohdeyleisö-kentän alle. Pudotusvalikon luku
+// tulee /audiences-reitiltä eli KOKO virrasta, joten segmentoidussa kirjeessä
+// (muistutus avaamattomille ym.) se on väärä luku juuri siinä kohdassa, josta
+// hyväksyjä sen katsoo. Lisätty 9.9.2026 segmenttitoiminnon myötä.
+function naytaSegmentti(d) {
+  const box = $("segmentInfo");
+  if (!box) return;
+  if (typeof d.vastaanottajia !== "number") { msg("segmentInfo", ""); return; }
+  if (!d.segment) {
+    msg("segmentInfo", "Lähtee koko virralle: " + d.vastaanottajia.toLocaleString("fi-FI") +
+      " vastaanottajaa.", "ok");
+    return;
+  }
+  const s = d.segment;
+  const osat = [];
+  if (s.tyyppi === "ei_avannut" && s.kampanja) {
+    osat.push("vain ne, jotka EIVÄT avanneet kampanjaa ”" + s.kampanja + "”");
+  }
+  if (s.poissulje_virrat && s.poissulje_virrat.length) {
+    osat.push("pois jätetään virrat: " + s.poissulje_virrat.join(", "));
+  }
+  msg("segmentInfo", "RAJATTU LÄHETYS — " + d.vastaanottajia.toLocaleString("fi-FI") +
+    " vastaanottajaa, ei koko virran " + d.vastaanottajia_koko_virta.toLocaleString("fi-FI") +
+    ". Rajaus: " + osat.join("; ") + ".", "ok");
 }
 
 // Napit näkyvät sekä roolin ETTÄ kirjeen tilan mukaan
