@@ -354,6 +354,18 @@ async function renderPreview(d) {
   }
   $("previewCard").classList.remove("hide");
   updateActionButtons(d.status);
+  // Rajaus näkyviin heti kirjeen avatessa, ei vasta lähetysdialogissa: hyväksyjän
+  // on nähtävä ennen Hyväksy-nappia, meneekö kirje koko virralle vai osajoukolle.
+  if (d.segment) {
+    const s = d.segment;
+    const osat = [];
+    if (s.tyyppi === "ei_avannut" && s.kampanja) osat.push("vain ne, jotka eivät avanneet kampanjaa " + s.kampanja);
+    if (s.poissulje_virrat && s.poissulje_virrat.length) osat.push("pois jätetään " + s.poissulje_virrat.join(", "));
+    msg("actionMsg", "RAJATTU LÄHETYS: " + d.vastaanottajia + " vastaanottajaa (koko virta " +
+      d.vastaanottajia_koko_virta + ") — " + osat.join("; "), "ok");
+  } else if (typeof d.vastaanottajia === "number") {
+    msg("actionMsg", "Lähetys koko virralle: " + d.vastaanottajia + " vastaanottajaa.", "ok");
+  }
   if (ME && ME.test_domains && !$("testTo").placeholder.includes(ME.test_domains[0])) {
     $("testTo").placeholder = "oma.osoite@" + ME.test_domains[0];
   }
@@ -437,9 +449,23 @@ async function sendReal() {
       "kirjettä (" + CUR.stream + "). Lataa sivu uudelleen ja avaa kirje listasta ennen lähetystä.", "err");
   }
   const aud = AUDS.find((a) => a.stream === CUR.stream) || { recipients: "?", label: CUR.stream };
+  // Segmentti rajaa lähetyksen virran SISÄLLÄ (muistutus avaamattomille ym.), joten
+  // virran koko ei ole se luku, jonka ihminen tässä tarkistaa. Näytetään kirjeen oma
+  // vastaanottajamäärä ja rajaus auki — muuten dialogi lupaisi taas väärän yleisön,
+  // kuten 4.9.2026 (lisätty 9.9.2026 segmenttitoiminnon myötä).
+  const maara = CUR.vastaanottajia ?? aud.recipients;
+  let segRivi = "";
+  if (CUR.segment) {
+    const s = CUR.segment;
+    const osat = [];
+    if (s.tyyppi === "ei_avannut" && s.kampanja) osat.push("vain ne, jotka eivät avanneet: " + s.kampanja);
+    if (s.poissulje_virrat && s.poissulje_virrat.length) osat.push("pois jätetään: " + s.poissulje_virrat.join(", "));
+    segRivi = "\nRAJAUS — tämä EI mene koko virralle:\n  " + osat.join("\n  ") +
+      "\n  (koko virta olisi " + aud.recipients + ")";
+  }
   const typed = prompt("Kirje: " + (CUR.subject || "(ei aihetta)") +
-    "\nYleisö: " + aud.label + " (" + CUR.stream + ")" +
-    "\nLähetetään " + aud.recipients + " vastaanottajalle." +
+    "\nYleisö: " + aud.label + " (" + CUR.stream + ")" + segRivi +
+    "\nLähetetään " + maara + " vastaanottajalle." +
     "\nTätä ei voi peruuttaa.\nKirjoita LÄHETÄ vahvistukseksi:");
   if (typed !== "LÄHETÄ") return msg("actionMsg", "Lähetys peruttu.");
   await laheta(false);
