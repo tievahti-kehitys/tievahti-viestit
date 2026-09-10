@@ -163,7 +163,32 @@ const BLOCK_TYPES = [
   ["vinkki", "Vinkkilaatikko (Hyvä tietää)"],
   ["askeleet", "Askeleet (numeroitu 1-2-3)"],
   ["ehdot", "Ehdot (pikkuprintti)"],
+  ["kuva", "Kuva kirjeen keskelle"],
+  ["palkki", "Yläpalkki bannerin päälle (ensimmäisenä lohkona)"],
+  ["kuvateksti", "Kuva ja teksti rinnakkain"],
+  ["palstat", "Kaksi tekstipalstaa"],
+  ["tuotekortti", "Tuotekortti omalla napilla"],
+  ["tumma", "Tumma laatikko (kampanja)"],
+  ["sitaatti", "Sitaatti (lainaus ja lähde)"],
+  ["erotin", "Erotin (brändiviiva)"],
+  ["vapaa", "Vapaa HTML (sisältöalue)"],
 ];
+// Lisäkentät lohkotyypin mukaan (D15, 10.9.2026). Kentät luodaan jokaiseen
+// lohkoon ja näytetään vain, kun tyyppi käyttää niitä — arvo säilyy piilossakin,
+// jotta selaimessa tehty muokkaus ei pyyhi AI:n asettamaa kenttää (sama vika
+// kuin lohkotyypeissä 1.9. ja muotoilukentissä 4.9.; kuva_url katosi 9.9.–10.9.).
+const LISAKENTAT = {
+  kuva: ["kuva_url", "kuva_alt", "koko"],
+  kuvateksti: ["kuva_url", "kuva_alt", "puoli"],
+  tuotekortti: ["kuva_url", "kuva_alt", "nappi_teksti", "nappi_url"],
+  tumma: ["nappi_teksti", "nappi_url"],
+  sitaatti: ["lahde"],
+  palstat: ["heading2", "text2"],
+  erotin: ["koko"],
+  vapaa: ["html", "koko"],
+};
+const LISAKENTAT_KAIKKI = ["kuva_url", "kuva_alt", "puoli", "koko", "nappi_teksti", "nappi_url",
+  "lahde", "heading2", "text2", "html"];
 
 function blockEl(b) {
   b = b || {};
@@ -222,6 +247,50 @@ function blockEl(b) {
     ["ei", "Ei merkkiä"],
   ]);
 
+  // Lisäkentät (D15): kaikki luodaan, näkyvyys tyypin mukaan
+  const lisa = {};
+  const lisaKentta = (name, labelText, el) => {
+    el.classList.add("b-" + name);
+    const l = document.createElement("label");
+    l.textContent = labelText;
+    wrap.append(l, el);
+    lisa[name] = { l, el };
+  };
+  const input = () => document.createElement("input");
+  const textarea = (short) => {
+    const t = document.createElement("textarea");
+    if (short) t.classList.add("short");
+    return t;
+  };
+  const sel = (vaihtoehdot) => {
+    const s = document.createElement("select");
+    vaihtoehdot.forEach(([v, t]) => {
+      const o = document.createElement("option");
+      o.value = v; o.textContent = t;
+      s.appendChild(o);
+    });
+    return s;
+  };
+  lisaKentta("kuva_url", "Kuvan osoite (vain oma kuvasäilö)", input());
+  lisaKentta("kuva_alt", "Kuvan alt-teksti (pakollinen, kun kuva on)", input());
+  lisaKentta("puoli", "Kuvan puoli", sel([["", "Vasen (oletus)"], ["oikea", "Oikea"]]));
+  lisaKentta("koko", "Koko", sel([["", "Sisältöleveys (oletus)"], ["taysi", "Koko leveys 600 px"], ["tyhja", "Pelkkä väli ilman viivaa (erotin)"]]));
+  lisaKentta("nappi_teksti", "Lohkon oma nappi: teksti", input());
+  lisaKentta("nappi_url", "Lohkon oma nappi: osoite (https)", input());
+  lisaKentta("lahde", "Sitaatin lähde (esim. Kajaanin Tieisännöinti Oy:n yrittäjä)", input());
+  lisaKentta("heading2", "Oikean palstan väliotsikko", input());
+  lisaKentta("text2", "Oikean palstan teksti", textarea(true));
+  lisaKentta("html", "Vapaa HTML (taulukot ja inline-tyylit; kuvat vain omasta kuvasäilöstä, linkit https)", textarea(false));
+  const paivitaNakyvyys = () => {
+    const kaytossa = LISAKENTAT[type.value] || [];
+    Object.keys(lisa).forEach((k) => {
+      const piilossa = kaytossa.indexOf(k) === -1;
+      lisa[k].l.style.display = piilossa ? "none" : "";
+      lisa[k].el.style.display = piilossa ? "none" : "";
+    });
+  };
+  type.addEventListener("change", paivitaNakyvyys);
+
   const row = document.createElement("div");
   row.className = "row";
   const del = document.createElement("button");
@@ -246,19 +315,25 @@ function blockEl(b) {
   items.value = (b.items || []).join("\n");
   asettelu.value = b.asettelu || "";
   merkki.value = b.merkki || "";
+  LISAKENTAT_KAIKKI.forEach((k) => { lisa[k].el.value = b[k] || ""; });
+  paivitaNakyvyys();
   return wrap;
 }
 
 function readBlocks() {
-  return Array.prototype.map.call($("blocks").querySelectorAll(".blk"), (d) => ({
-    type: d.querySelector(".b-type").value,
-    heading: d.querySelector(".b-heading").value.trim(),
-    text: d.querySelector(".b-text").value.trim(),
-    items: d.querySelector(".b-items").value.split("\n")
-      .map((s) => s.trim()).filter(Boolean),
-    asettelu: d.querySelector(".b-asettelu").value,
-    merkki: d.querySelector(".b-merkki").value,
-  })).filter((b) => b.text || b.items.length || b.heading);
+  return Array.prototype.map.call($("blocks").querySelectorAll(".blk"), (d) => {
+    const v = (cls) => { const el = d.querySelector(cls); return el ? el.value : ""; };
+    const b = {
+      type: v(".b-type"),
+      heading: v(".b-heading").trim(),
+      text: v(".b-text").trim(),
+      items: v(".b-items").split("\n").map((s) => s.trim()).filter(Boolean),
+      asettelu: v(".b-asettelu"),
+      merkki: v(".b-merkki"),
+    };
+    LISAKENTAT_KAIKKI.forEach((k) => { const x = v(".b-" + k).trim(); if (x) b[k] = x; });
+    return b;
+  }).filter((b) => b.text || b.items.length || b.heading || b.kuva_url || b.html || b.text2 || b.type === "erotin");
 }
 
 // Kaikki kirjepalvelun DRAFT_FIELDS-tekstikentät (stream ja body_blocks käsitellään erikseen).
